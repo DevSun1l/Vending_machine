@@ -1,0 +1,1121 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Trace-Backed Vending Machine FSM Demo</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --accent: #38bdf8;
+            --accent-soft: rgba(56, 189, 248, 0.1);
+            --accent-strong: #0ea5e9;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --line: #334155;
+            --warn: #f59e0b;
+            --error: #f43f5e;
+            --ok: #10b981;
+            --radius: 12px;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+            --glow: 0 0 15px rgba(56, 189, 248, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            color: var(--text-main);
+            background: var(--bg);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        main {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 310px minmax(0, 1fr);
+            gap: 20px;
+            padding: 20px;
+        }
+
+        h1,
+        h2,
+        h3,
+        p {
+            margin: 0;
+        }
+
+        h1 {
+            font-size: 22px;
+            line-height: 1.1;
+            letter-spacing: 0;
+        }
+
+        h2 {
+            font-size: 18px;
+        }
+
+        h3 {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        p {
+            color: var(--text-muted);
+            line-height: 1.5;
+            font-size: 13px;
+        }
+
+        button {
+            font: inherit;
+            color: var(--text-main);
+            background: var(--surface-light);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        button:hover {
+            border-color: var(--accent);
+            background: var(--surface);
+            box-shadow: var(--glow);
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .sidebar {
+            padding: 16px;
+            display: grid;
+            gap: 16px;
+            align-content: start;
+        }
+
+        .brand {
+            display: grid;
+            gap: 8px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .brand h1 {
+            color: var(--accent);
+            text-shadow: 0 0 10px var(--accent-glow);
+        }
+
+        .scenario-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .scenario-button {
+            text-align: left;
+            padding: 12px;
+            display: grid;
+            gap: 4px;
+            background: transparent;
+            border-color: transparent;
+            width: 100%;
+            justify-content: start;
+        }
+
+        .scenario-button:hover {
+            background: var(--surface-light);
+            border-color: var(--line);
+        }
+
+        .scenario-button strong {
+            font-size: 13px;
+        }
+
+        .scenario-button span {
+            color: var(--text-muted);
+            font-size: 11px;
+        }
+
+        .scenario-button.active {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+            box-shadow: inset 3px 0 0 var(--accent);
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-rows: auto 1fr;
+            gap: 0;
+            min-width: 0;
+        }
+
+        .workspace-scroll {
+            overflow-y: auto;
+            padding: 0 24px 32px;
+            display: grid;
+            gap: 32px;
+        }
+
+        .topbar {
+            padding: 18px 20px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .scenario-title {
+            display: grid;
+            gap: 8px;
+            max-width: 850px;
+        }
+
+        .scenario-title h2 {
+            font-size: 28px;
+            color: var(--accent);
+            font-weight: 800;
+        }
+
+        .source-pill {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 999px;
+            background: var(--surface-light);
+            border: 1px solid var(--line);
+            color: var(--text-muted);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .source-pill b {
+            color: var(--accent);
+        }
+
+        .source-pill .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--ok);
+            box-shadow: 0 0 10px var(--ok);
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .controls button {
+            min-width: 84px;
+            padding: 9px 12px;
+            font-weight: 600;
+        }
+
+        .controls .primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            padding: 0 20px 14px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .tab {
+            padding: 8px 14px;
+            color: var(--muted);
+            background: var(--surface);
+            border: 1px solid transparent;
+            border-bottom: none;
+        }
+
+        .tab.active {
+            color: var(--accent);
+            border-color: var(--line);
+            background: var(--surface-2);
+            font-weight: bold;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .content {
+            display: grid;
+            gap: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+
+        .section-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .section-header::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent);
+        }
+
+        /* Layout Grids */
+        .demo-grid {
+            display: grid;
+            grid-template-columns: minmax(320px, 430px) minmax(320px, 1fr) 260px;
+            gap: 16px;
+            align-items: stretch;
+            max-width: 1420px;
+        }
+
+        .machine {
+            padding: 24px;
+            display: grid;
+            gap: 16px;
+            align-content: start;
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            color: white;
+            border-radius: var(--radius);
+            border: 1px solid var(--line);
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .machine-screen {
+            border: 1px solid rgba(255, 255, 255, .22);
+            background: rgba(255, 255, 255, .08);
+            border-radius: var(--radius);
+            padding: 14px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .machine-screen h2 {
+            color: white;
+            font-size: 20px;
+        }
+
+        .products,
+        .amount-grid,
+        .led-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+
+        .product {
+            border: 1px solid rgba(255, 255, 255, .2);
+            background: rgba(255, 255, 255, .06);
+            border-radius: 7px;
+            padding: 10px;
+            display: grid;
+            gap: 5px;
+        }
+
+        .product.active {
+            border-color: #93c5fd;
+            background: rgba(59, 130, 246, .2);
+        }
+
+        .readout {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .readout .label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .readout .value {
+            font-size: 24px;
+            font-weight: 900;
+            margin-top: 2px;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .led {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            border: 1px solid rgba(255, 255, 255, .16);
+            border-radius: 7px;
+            padding: 9px 10px;
+            font-size: 12px;
+        }
+
+        .lamp {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #475569;
+            flex: 0 0 auto;
+        }
+
+        .led.on .lamp {
+            background: #22c55e;
+            box-shadow: 0 0 18px rgba(34, 197, 94, .9);
+        }
+
+        .led.warn.on .lamp {
+            background: #f59e0b;
+            box-shadow: 0 0 18px rgba(245, 158, 11, .9);
+        }
+
+        .led.error.on .lamp {
+            background: #ef4444;
+            box-shadow: 0 0 18px rgba(239, 68, 68, .9);
+        }
+
+        .fsm-panel,
+        .timing-panel,
+        .register-panel,
+        .table-panel,
+        .canvas-panel {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--surface);
+            padding: 16px;
+        }
+
+        .fsm-panel {
+            display: grid;
+            grid-template-rows: auto minmax(0, 1fr) auto;
+            gap: 12px;
+        }
+
+        .state-path {
+            display: grid;
+            gap: 8px;
+        }
+
+        .state-card {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 10px 14px;
+            background: var(--surface-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: .2s ease;
+        }
+
+        .state-card.active {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+            box-shadow: var(--glow);
+            transform: translateX(4px);
+        }
+
+        .state-index {
+            display: inline-flex;
+            width: 24px;
+            height: 24px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: white;
+            border: 1px solid var(--line);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .state-card.active .state-index {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .step-explain {
+            border-left: 4px solid var(--accent);
+            background: var(--surface-2);
+            padding: 12px;
+            border-radius: 0 7px 7px 0;
+            display: grid;
+            gap: 5px;
+        }
+
+        .timing-panel {
+            display: grid;
+            gap: 10px;
+            align-content: start;
+        }
+
+        .metric {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: var(--surface-light);
+            padding: 12px;
+        }
+
+        .metric .value {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .metric .label {
+            color: var(--text-muted);
+            font-size: 11px;
+            margin-top: 2px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .trace-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .trace-table th,
+        .trace-table td {
+            border-bottom: 1px solid var(--line);
+            padding: 10px 8px;
+            text-align: left;
+        }
+
+        .trace-table th {
+            color: var(--text-muted);
+            background: var(--surface-light);
+            text-transform: uppercase;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .trace-table tr.active td {
+            background: var(--accent-soft);
+            font-weight: 700;
+            color: var(--accent);
+            box-shadow: inset 4px 0 0 var(--accent);
+        }
+
+        .register-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .reg-card {
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: var(--surface-light);
+            padding: 14px;
+            transition: 0.2s;
+        }
+
+        .reg-card:hover {
+            border-color: var(--accent);
+        }
+
+        .reg-card .label {
+            color: var(--muted);
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .reg-card .value {
+            font-size: 22px;
+            font-weight: 800;
+            margin-top: 6px;
+        }
+
+        #waveCanvas,
+        #fpgaCanvas {
+            width: 100%;
+            height: 420px;
+            background: #0f172a;
+            border-radius: 8px;
+            box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        #fpgaCanvas {
+            background: #0f172a;
+            /* Matches Dashboard BG */
+        }
+
+        @media (max-width: 1180px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <aside class="panel sidebar">
+            <div class="brand">
+                <h1>FSM Trace Visualizer</h1>
+                <p>VHDL Vending Machine v2.0</p>
+            </div>
+            <h3>Scenarios</h3>
+            <div class="scenario-list" id="scenarioList"></div>
+        </aside>
+
+        <section class="panel workspace">
+            <header class="topbar">
+                <div class="scenario-title">
+                    <span class="source-pill" id="sourcePill"></span>
+                    <h2 id="scenarioTitle"></h2>
+                    <p id="scenarioDescription"></p>
+                </div>
+
+                <div class="controls">
+                    <button id="resetButton">Reset</button>
+                    <button id="prevButton">Prev</button>
+                    <button id="nextButton">Next</button>
+                    <button id="playButton" class="primary">Play Trace</button>
+                </div>
+            </header>
+
+            <div class="workspace-scroll">
+                <section class="content" id="tab-demo">
+                    <div class="section-header">
+                        <h2>FSM System View</h2>
+                    </div>
+                <div class="demo-grid">
+                    <div class="machine">
+                        <div class="machine-screen">
+                            <h2>Hardware Output</h2>
+                            <p id="machineMessage"></p>
+                        </div>
+                        <div class="products" id="productGrid"></div>
+                        <div class="amount-grid">
+                            <div class="readout">
+                                <div class="label">Selected</div>
+                                <div class="value" id="selectedProduct">-</div>
+                            </div>
+                            <div class="readout">
+                                <div class="label">Quantity</div>
+                                <div class="value" id="quantityValue">-</div>
+                            </div>
+                            <div class="readout">
+                                <div class="label">Credit</div>
+                                <div class="value" id="creditValue">0</div>
+                            </div>
+                            <div class="readout">
+                                <div class="label">Change</div>
+                                <div class="value" id="changeValue">0</div>
+                            </div>
+                        </div>
+                        <div class="led-grid">
+                            <div class="led" data-led="product"><span>Product LED</span><span class="lamp"></span></div>
+                            <div class="led" data-led="change"><span>Change Valid</span><span class="lamp"></span></div>
+                            <div class="led warn" data-led="return"><span>Return LED</span><span class="lamp"></span>
+                            </div>
+                            <div class="led error" data-led="error"><span>Error LED</span><span class="lamp"></span>
+                            </div>
+                            <div class="led warn" data-led="revenue"><span>Rev Full</span><span class="lamp"></span>
+                            </div>
+                            <div class="led warn" data-led="lowStock"><span>Service</span><span class="lamp"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="fsm-panel">
+                        <div>
+                            <h2>State Machine</h2>
+                            <p>Active sequence path.</p>
+                        </div>
+                        <div class="state-path" id="statePath"></div>
+                        <div class="step-explain">
+                            <strong id="stepTitle"></strong><span id="stepDetail"></span>
+                        </div>
+                    </div>
+
+                    <div class="timing-panel">
+                        <div>
+                            <h2>Timing Data</h2>
+                            <p>50 MHz / 20ns constraint.</p>
+                        </div>
+                        <div class="metric">
+                            <div class="value" id="cycleMetric">0</div>
+                            <div class="label">trace cycle</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value" id="hwTimeMetric">0 ns</div>
+                            <div class="label">current time marker</div>
+                        </div>
+                        <div class="metric">
+                            <div class="value" id="totalTimeMetric" style="color: var(--accent-strong);">0 ns</div>
+                            <div class="label">total execution time</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+                <section class="content" id="tab-waveform">
+                    <div class="section-header">
+                        <h2>Logic Analyzer</h2>
+                    </div>
+                    <div class="canvas-panel">
+                        <canvas id="waveCanvas" width="1000" height="420"></canvas>
+                    </div>
+            </section>
+
+                <section class="content" id="tab-fpga">
+                    <div class="section-header">
+                        <h2>FPGA Pin Mapping</h2>
+                    </div>
+                    <div class="canvas-panel">
+                        <canvas id="fpgaCanvas" width="1000" height="420"></canvas>
+                    </div>
+            </section>
+
+                <section class="content" id="tab-registers">
+                    <div class="section-header">
+                        <h2>Hardware Registers</h2>
+                    </div>
+                    <div class="register-panel">
+                    <div class="register-grid" id="registerGrid"></div>
+                </div>
+            </section>
+
+                <section class="content" id="tab-trace">
+                    <div class="section-header">
+                        <h2>Execution Trace Table</h2>
+                    </div>
+                    <div class="table-panel">
+                    <table class="trace-table" id="fullTrace"></table>
+                </div>
+            </section>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const CLOCK = { hardwareNs: 20 };
+
+        const PRODUCTS = [
+            { id: "CHOCOLATE", label: "Chocolate", price: 50 },
+            { id: "CHIPS", label: "Chips", price: 200 },
+            { id: "JUICE", label: "Juice", price: 300 },
+            { id: "CAKE", label: "Cake", price: 400 }
+        ];
+
+        function step(cycle, state, product, quantity, credit, change, stock, revenue, sales, leds, title, detail) {
+            const item = PRODUCTS.find(p => p.id === product);
+            return { cycle, state, product, quantity, price: item.price, total: item.price * quantity, credit, change, stock, revenue, sales, leds, title, detail };
+        }
+
+        const scenarios = [
+            {
+                id: "normal", test: "TC01", title: "Normal Purchase", subtitle: "Exact change standard flow",
+                description: "A short baseline trace showing the original path.",
+                steps: [
+                    step(0, "IDLE", "CHOCOLATE", 1, 0, 0, 15, 0, 0, {}, "Machine starts idle.", "Waiting for input."),
+                    step(1, "COLLECTING", "CHOCOLATE", 1, 50, 0, 15, 0, 0, {}, "50 fils inserted.", "Credit register stores coin."),
+                    step(2, "BUYING", "CHOCOLATE", 1, 50, 0, 15, 0, 0, {}, "Buy pressed.", "FSM checks credit/stock."),
+                    step(3, "DISPENSING", "CHOCOLATE", 1, 0, 0, 14, 50, 1, { product: true }, "Product dispensed.", "Stock updates."),
+                    step(4, "CHANGE", "CHOCOLATE", 1, 0, 0, 14, 50, 1, {}, "No change needed.", "Transaction completes."),
+                    step(5, "IDLE", "CHOCOLATE", 1, 0, 0, 14, 50, 1, {}, "Back to IDLE.", "Ready.")
+                ]
+            },
+            {
+                id: "tc05", test: "TC05", title: "Card Authorization", subtitle: "300 fils card -> JUICE",
+                description: "Tests the CARD_WAIT state and delayed authorization logic.",
+                steps: [
+                    step(0, "IDLE", "JUICE", 1, 0, 0, 15, 0, 0, {}, "Machine idle.", "No payment."),
+                    step(1, "CARD_WAIT", "JUICE", 1, 0, 0, 15, 0, 0, {}, "Card inserted.", "FSM waiting for auth pulse."),
+                    step(2, "COLLECTING", "JUICE", 1, 300, 0, 15, 0, 0, {}, "Card Valid.", "Credit updated securely."),
+                    step(3, "BUYING", "JUICE", 1, 300, 0, 15, 0, 0, {}, "Buy pressed.", "Evaluating sale."),
+                    step(4, "DISPENSING", "JUICE", 1, 0, 0, 14, 300, 1, { product: true }, "Juice dispensed.", "Success."),
+                    step(5, "CHANGE", "JUICE", 1, 0, 0, 14, 300, 1, {}, "No change.", "Finished."),
+                    step(6, "IDLE", "JUICE", 1, 0, 0, 14, 300, 1, {}, "Back to IDLE.", "Ready.")
+                ]
+            },
+            {
+                id: "tc11", test: "TC11", title: "Inactivity Timeout", subtitle: "TIMEOUT state refund",
+                description: "Tests the generic TIMEOUT_VAL trigger returning active credit.",
+                steps: [
+                    step(0, "IDLE", "CHOCOLATE", 1, 0, 0, 15, 0, 0, {}, "Idle.", "Waiting."),
+                    step(1, "COLLECTING", "CHOCOLATE", 1, 500, 0, 15, 0, 0, {}, "500 fils inserted.", "User walks away."),
+                    step(2, "TIMEOUT", "CHOCOLATE", 1, 500, 0, 15, 0, 0, {}, "Counter expires.", "Timeout state triggered."),
+                    step(3, "RETURNING", "CHOCOLATE", 1, 0, 500, 15, 0, 0, { return: true, change: true }, "Refunding.", "Returning 500 fils safely."),
+                    step(4, "IDLE", "CHOCOLATE", 1, 0, 500, 15, 0, 0, { return: true }, "Reset.", "Money returned.")
+                ]
+            },
+            {
+                id: "tc12", test: "TC12", title: "Manager Analytics", subtitle: "Expose hidden registers",
+                description: "Manager mode unmasks protected revenue and sales data.",
+                steps: [
+                    step(0, "IDLE", "CHIPS", 1, 0, 0, 14, 500, 2, {}, "Idle.", "Manager mode disabled (data hidden)."),
+                    step(1, "MANAGER", "CHIPS", 1, 0, 0, 14, 500, 2, {}, "Manager key inserted.", "Revenue and sales exposed."),
+                    step(2, "IDLE", "CHIPS", 1, 0, 0, 14, 500, 2, {}, "Key removed.", "Data hidden again.")
+                ]
+            },
+            {
+                id: "multi", test: "TC22", title: "Multi-Quantity", subtitle: "Buy 3x CHIPS, return change",
+                description: "Multiple item execution looping within standard FSM.",
+                steps: [
+                    step(0, "IDLE", "CHIPS", 3, 0, 0, 15, 0, 0, {}, "Quantity selected.", "Qty is 3."),
+                    step(1, "COLLECTING", "CHIPS", 3, 1000, 0, 15, 0, 0, {}, "1000 fils inserted.", "Credit stored."),
+                    step(2, "BUYING", "CHIPS", 3, 1000, 0, 15, 0, 0, {}, "Buy pressed.", "Validating stock>=3, credit>=600."),
+                    step(3, "DISPENSING", "CHIPS", 3, 400, 400, 12, 600, 3, { product: true }, "Three CHIPS dispensed.", "Math applied."),
+                    step(4, "CHANGE", "CHIPS", 3, 0, 400, 12, 600, 3, { change: true }, "Change returned.", "400 valid."),
+                    step(5, "IDLE", "CHIPS", 3, 0, 400, 12, 600, 3, {}, "Transaction complete.", "Back to IDLE.")
+                ]
+            },
+            {
+                id: "tc25", test: "TC25", title: "All Sold Out", subtitle: "Machine locks until restock",
+                description: "Tests the SERVICE_REQUIRED block when total stock = 0.",
+                steps: [
+                    step(0, "IDLE", "CHOCOLATE", 1, 0, 0, 0, 0, 0, { lowStock: true }, "Stock empty.", "Detecting zero inventory."),
+                    step(1, "ALL_SOLD_OUT", "CHOCOLATE", 1, 0, 0, 0, 0, 0, { lowStock: true, error: true }, "Service Required.", "Sales strictly blocked."),
+                    step(2, "RESTOCKING", "CHOCOLATE", 1, 0, 0, 15, 0, 0, {}, "Restock mode.", "Adding products."),
+                    step(3, "IDLE", "CHOCOLATE", 1, 0, 0, 15, 0, 0, {}, "Recovered.", "Machine functional again.")
+                ]
+            }
+        ];
+
+        let activeScenario = scenarios[0];
+        let activeStep = 0;
+        let timer = null;
+
+        function el(id) { return document.getElementById(id); }
+        function current() { return activeScenario.steps[activeStep]; }
+
+        function init() {
+            el("scenarioList").innerHTML = scenarios.map(s => `
+    <button class="scenario-button" data-scenario="${s.id}">
+      <strong>${s.title}</strong><span>${s.test} - ${s.subtitle}</span>
+    </button>`).join("");
+
+            document.querySelectorAll("[data-scenario]").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    stopPlayback(); activeScenario = scenarios.find(s => s.id === btn.dataset.scenario); activeStep = 0; renderAll();
+                });
+            });
+
+            el("productGrid").innerHTML = PRODUCTS.map(p => `<div class="product" data-product="${p.id}"><strong>${p.label}</strong><span>${p.price} fils</span></div>`).join("");
+
+            el("resetButton").onclick = () => { stopPlayback(); activeStep = 0; renderAll(); };
+            el("prevButton").onclick = () => { stopPlayback(); activeStep = Math.max(0, activeStep - 1); renderAll(); };
+            el("nextButton").onclick = () => { stopPlayback(); activeStep = Math.min(activeScenario.steps.length - 1, activeStep + 1); renderAll(); };
+
+            el("playButton").onclick = () => {
+                if (timer) { stopPlayback(); return; }
+                if (activeStep >= activeScenario.steps.length - 1) activeStep = 0;
+                el("playButton").textContent = "Pause Trace";
+                timer = setInterval(() => {
+                    activeStep += 1;
+                    if (activeStep >= activeScenario.steps.length - 1) { activeStep = activeScenario.steps.length - 1; stopPlayback(); }
+                    renderAll();
+                }, 1000);
+            };
+
+            renderAll();
+        }
+
+        function stopPlayback() { if (timer) clearInterval(timer); timer = null; el("playButton").textContent = "Play Trace"; }
+
+        function renderAll() {
+            document.querySelectorAll("[data-scenario]").forEach(b => b.classList.toggle("active", b.dataset.scenario === activeScenario.id));
+            el("sourcePill").innerHTML = `<span class="dot"></span><b>${activeScenario.test}</b> Waveform Aligned`;
+            el("scenarioTitle").textContent = activeScenario.title;
+            el("scenarioDescription").textContent = activeScenario.description;
+
+            const s = current();
+            const product = PRODUCTS.find(p => p.id === s.product);
+            el("machineMessage").textContent = s.title;
+            el("selectedProduct").textContent = product.label;
+            el("quantityValue").textContent = `x${s.quantity}`;
+            el("creditValue").textContent = s.credit;
+            el("changeValue").textContent = s.change;
+
+            document.querySelectorAll("[data-product]").forEach(c => c.classList.toggle("active", c.dataset.product === s.product));
+
+            ["product", "change", "return", "error", "revenue", "lowStock"].forEach(name => {
+                const node = document.querySelector(`[data-led="${name}"]`);
+                if (node) node.classList.toggle("on", !!s.leds[name]);
+            });
+
+            el("statePath").innerHTML = activeScenario.steps.map((step, i) => `
+    <div class="state-card ${i === activeStep ? "active" : ""}">
+      <div><strong>${step.state}</strong></div><span class="state-index">${i}</span>
+    </div>`).join("");
+            el("stepTitle").textContent = `${s.state}: ${s.title}`;
+            el("stepDetail").textContent = s.detail;
+
+            // Update Timings
+            el("cycleMetric").textContent = s.cycle;
+            el("hwTimeMetric").textContent = `${s.cycle * CLOCK.hardwareNs} ns`;
+            el("totalTimeMetric").textContent = `${(activeScenario.steps.length - 1) * CLOCK.hardwareNs} ns`;
+
+            el("registerGrid").innerHTML = [
+                ["State", s.state], ["Credit Reg", `${s.credit} fils`], ["Change Reg", `${s.change} fils`],
+                ["Target Qty", `x${s.quantity}`], ["Stock Reg", `${s.stock} units`], ["Revenue Reg", `${s.revenue} fils`]
+            ].map(([l, v]) => `<div class="reg-card"><div class="label">${l}</div><div class="value">${v}</div></div>`).join("");
+
+            el("fullTrace").innerHTML = `
+    <thead><tr><th>Cycle</th><th>State</th><th>Credit</th><th>Change</th><th>Stock</th><th>Revenue</th></tr></thead>
+    <tbody>${activeScenario.steps.map((row, i) => `
+      <tr class="${i === activeStep ? "active" : ""}">
+        <td>${row.cycle}</td><td>${row.state}</td><td>${row.credit}</td><td>${row.change}</td><td>${row.stock}</td><td>${row.revenue}</td>
+      </tr>`).join("")}</tbody>`;
+
+            drawWaveform();
+            drawFPGA();
+        }
+
+
+        function drawWaveform() {
+            const canvas = el("waveCanvas");
+            canvas.width = canvas.clientWidth;
+            const ctx = canvas.getContext("2d");
+            const w = canvas.width; const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const steps = activeScenario.steps;
+            if (steps.length === 0) return;
+
+            const stepW = (w - 120) / Math.max(steps.length, 5);
+            ctx.font = "13px monospace";
+
+            const signals = ["clk (50MHz)", "state (bus)", "credit (bus)", "change (bus)", "led_active"];
+            const yOffset = 40;
+            const rowH = 60;
+
+            signals.forEach((sig, i) => {
+                ctx.fillStyle = "#94a3b8";
+                ctx.fillText(sig, 10, i * rowH + yOffset + 35);
+                ctx.beginPath();
+                ctx.strokeStyle = "#334155";
+                ctx.moveTo(110, i * rowH + yOffset + rowH);
+                ctx.lineTo(w, i * rowH + yOffset + rowH);
+                ctx.stroke();
+            });
+
+            ctx.save();
+            ctx.translate(120, 0);
+
+            ctx.fillStyle = "#cbd5e1";
+            ctx.font = "11px monospace";
+            steps.forEach((s, idx) => {
+                const x = idx * stepW;
+                ctx.fillText((idx * CLOCK.hardwareNs) + " ns", x + 4, 20);
+                ctx.beginPath();
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+                ctx.moveTo(x, 25); ctx.lineTo(x, h);
+                ctx.stroke();
+            });
+
+            steps.forEach((s, idx) => {
+                const x = idx * stepW;
+
+                if (idx === activeStep) {
+                    ctx.fillStyle = "rgba(59, 130, 246, 0.25)";
+                    ctx.fillRect(x, 25, stepW, h - 25);
+                }
+
+                ctx.strokeStyle = "#22c55e"; ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x, yOffset + 40); ctx.lineTo(x + stepW / 2, yOffset + 40);
+                ctx.lineTo(x + stepW / 2, yOffset + 15); ctx.lineTo(x + stepW, yOffset + 15); ctx.lineTo(x + stepW, yOffset + 40);
+                ctx.stroke();
+
+                ctx.strokeStyle = "#facc15"; ctx.fillStyle = "#facc15"; ctx.lineWidth = 1;
+                ctx.strokeRect(x + 2, yOffset + 60 + 15, stepW - 4, 30);
+                ctx.fillText(s.state.substring(0, 12), x + 8, yOffset + 60 + 35);
+
+                ctx.strokeStyle = "#60a5fa"; ctx.fillStyle = "#60a5fa";
+                ctx.strokeRect(x + 2, yOffset + 120 + 15, stepW - 4, 30);
+                ctx.fillText(s.credit, x + 8, yOffset + 120 + 35);
+
+                ctx.strokeStyle = "#f87171"; ctx.fillStyle = "#f87171";
+                ctx.strokeRect(x + 2, yOffset + 180 + 15, stepW - 4, 30);
+                ctx.fillText(s.change, x + 8, yOffset + 180 + 35);
+
+                const ledOn = s.leds.product || s.leds.return || s.leds.error;
+                ctx.strokeStyle = "#a78bfa"; ctx.lineWidth = 2;
+                ctx.beginPath();
+                const yVal = ledOn ? yOffset + 240 + 15 : yOffset + 240 + 40;
+                ctx.moveTo(x, yVal); ctx.lineTo(x + stepW, yVal);
+
+                if (idx > 0) {
+                    const lastLedOn = steps[idx - 1].leds.product || steps[idx - 1].leds.return || steps[idx - 1].leds.error;
+                    if (lastLedOn !== ledOn) {
+                        ctx.moveTo(x, lastLedOn ? yOffset + 240 + 15 : yOffset + 240 + 40);
+                        ctx.lineTo(x, yVal);
+                    }
+                }
+                ctx.stroke();
+            });
+
+            ctx.restore();
+        }
+
+        function drawFPGA() {
+            const canvas = el("fpgaCanvas");
+            canvas.width = canvas.clientWidth;
+            const ctx = canvas.getContext("2d");
+            const w = canvas.width; const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            const s = current();
+
+            // Helper to draw traces with optional glowing "data" effect
+            function drawTrace(x1, y1, x2, y2, active, color) {
+                ctx.beginPath();
+                ctx.strokeStyle = active ? color : "rgba(255, 255, 255, 0.15)";
+                ctx.lineWidth = active ? 3 : 1;
+                ctx.moveTo(x1, y1);
+
+                // Calculate intermediate points for Manhattan routing
+                const midX = x1 + (x2 - x1) / 2;
+                ctx.lineTo(midX, y1);
+                ctx.lineTo(midX, y2);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+
+                if (active) {
+                    ctx.save();
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = 12;
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+            // Draw FPGA Chip (Center)
+            const chipSize = 140;
+            const chipX = (w / 2) - (chipSize / 2);
+            const chipY = (h / 2) - (chipSize / 2);
+
+            ctx.fillStyle = "#0f172a"; // Dark chip package
+            ctx.fillRect(chipX, chipY, chipSize, chipSize);
+            ctx.strokeStyle = "#475569";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(chipX, chipY, chipSize, chipSize);
+
+            // Chip Label
+            ctx.fillStyle = "#cbd5e1";
+            ctx.font = "bold 16px sans-serif";
+            ctx.fillText("FPGA", chipX + 45, chipY + 60);
+            ctx.font = "12px sans-serif";
+            ctx.fillText("CYCLONE V", chipX + 35, chipY + 80);
+
+            // Draw 7-Segment Displays for Credit (Top Left)
+            ctx.fillStyle = "#020617";
+            ctx.fillRect(50, 40, 220, 90);
+            ctx.strokeStyle = "#334155";
+            ctx.strokeRect(50, 40, 220, 90);
+
+            ctx.font = "bold 24px monospace";
+            const displayActive = (s.credit > 0 || s.change > 0);
+            ctx.fillStyle = displayActive ? "#38bdf8" : "#0f172a";
+            ctx.shadowColor = "#38bdf8"; ctx.shadowBlur = displayActive ? 15 : 0;
+            ctx.fillText(`CREDIT: ${String(s.credit).padStart(4, '0')}`, 65, 75);
+            ctx.fillText(`CHANGE: ${String(s.change).padStart(4, '0')}`, 65, 110);
+            ctx.shadowBlur = 0;
+
+            // Route to Display
+            drawTrace(chipX, chipY + 40, 270, 85, displayActive, "#38bdf8");
+
+            // Draw DIP Switches (Inputs - Bottom Left)
+            ctx.fillStyle = "#1e293b";
+            ctx.fillRect(50, h - 120, 160, 60);
+            ctx.fillStyle = "#cbd5e1";
+            ctx.font = "10px sans-serif";
+            ctx.fillText("SW (COIN / BUTTON SIM)", 50, h - 130);
+
+            for (let i = 0; i < 4; i++) {
+                const active = (s.state === "COLLECTING" || s.state === "BUYING") && (s.credit > 0) && (i === 0);
+                ctx.fillStyle = active ? "#f43f5e" : "#334155";
+                ctx.fillRect(60 + (i * 35), h - 110, 20, 40);
+                drawTrace(chipX, chipY + 100 + (i * 10), 140, h - 90, active, "#f43f5e");
+            }
+
+            // Draw Product LEDs (Top Right)
+            ctx.fillStyle = "#cbd5e1";
+            ctx.fillText("LEDR [PRODUCT DISPENSE]", w - 220, 30);
+            const pLeds = [s.leds.product, false, false, false]; // Representing the 4 bit vector
+            for (let i = 0; i < 4; i++) {
+                const active = pLeds[i];
+                const yPos = 50 + (i * 30);
+                drawTrace(chipX + chipSize, chipY + 20 + (i * 15), w - 240, yPos, active, "#38bdf8");
+
+                ctx.beginPath();
+                ctx.arc(w - 200, yPos, 10, 0, Math.PI * 2);
+                ctx.fillStyle = active ? "#38bdf8" : "#1e293b";
+
+                if (active) { ctx.shadowColor = "#38bdf8"; ctx.shadowBlur = 15; }
+                ctx.fill(); ctx.shadowBlur = 0;
+
+                ctx.strokeStyle = "#334155"; ctx.stroke();
+                ctx.fillStyle = "#94a3b8";
+                ctx.fillText(`P${i + 1}`, w - 180, yPos + 4);
+            }
+
+            // Draw Status LEDs (Bottom Right)
+            ctx.fillText("LEDR [SYSTEM STATUS]", w - 220, h - 160);
+            const statLeds = [
+                { label: "CHANGE", active: s.leds.change, color: "#10b981" },
+                { label: "ERROR", active: s.leds.error, color: "#f43f5e" },
+                { label: "RETURN", active: s.leds.return, color: "#f59e0b" },
+                { label: "SERVICE", active: s.leds.lowStock, color: "#f59e0b" }
+            ];
+
+            statLeds.forEach((led, i) => {
+                const yPos = h - 140 + (i * 30);
+                drawTrace(chipX + chipSize, chipY + 80 + (i * 15), w - 240, yPos, led.active, led.color);
+
+                ctx.beginPath();
+                ctx.arc(w - 200, yPos, 10, 0, Math.PI * 2);
+                ctx.fillStyle = led.active ? led.color : "#1e293b";
+
+                if (led.active) { ctx.shadowColor = led.color; ctx.shadowBlur = 15; }
+                ctx.fill(); ctx.shadowBlur = 0;
+
+                ctx.strokeStyle = "#334155"; ctx.stroke();
+                ctx.fillStyle = "#94a3b8";
+                ctx.fillText(led.label, w - 180, yPos + 4);
+            });
+        }
+
+        window.addEventListener("resize", () => {
+            drawWaveform();
+            drawFPGA();
+        });
+        init();
+    </script>
+</body>
+
+</html>
