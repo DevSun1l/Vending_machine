@@ -794,6 +794,28 @@
                 ]
             },
             {
+                id: "tc23", test: "TC23", title: "Dispense Failure", subtitle: "Refund without recording sale",
+                description: "Tests hardware sensor fault (dispense_fail = '1') during the DISPENSING state.",
+                steps: [
+                    step(0, "IDLE", "CHIPS", 1, 0, 0, 15, 0, 0, {}, "Machine idle.", "Sensor active."),
+                    step(1, "COLLECTING", "CHIPS", 1, 500, 0, 15, 0, 0, {}, "500 fils inserted.", "Credit stored."),
+                    step(2, "BUYING", "CHIPS", 1, 500, 0, 15, 0, 0, {}, "Buy pressed.", "Evaluating sale."),
+                    step(3, "DISPENSING", "CHIPS", 1, 0, 500, 15, 0, 0, { error: true, return: true }, "Dispense Failure!", "No stock deducted. Credit moved to change reg."),
+                    step(4, "CHANGE", "CHIPS", 1, 0, 500, 15, 0, 0, { error: true, return: true, change: true }, "Refund initiated.", "Returning full 500 fils."),
+                    step(5, "IDLE", "CHIPS", 1, 0, 500, 15, 0, 0, { error: true, return: true }, "Back to IDLE.", "No sale recorded.")
+                ]
+            },
+            {
+                id: "tc24", test: "TC24", title: "Partial Restock", subtitle: "Adds exact selected quantity",
+                description: "Tests the LOAD state adding exactly the restock_amount to the inventory.",
+                steps: [
+                    step(0, "IDLE", "CHOCOLATE", 1, 0, 0, 1, 700, 14, { lowStock: true }, "Stock low.", "Only 1 unit remains."),
+                    step(1, "RESTOCKING", "CHOCOLATE", 1, 0, 0, 1, 700, 14, { lowStock: true }, "Load Mode.", "Admin inputs restock amount = 2."),
+                    step(2, "RESTOCKING", "CHOCOLATE", 1, 0, 0, 3, 700, 14, {}, "Stock Updated.", "Adding 2 units. New total = 3."),
+                    step(3, "IDLE", "CHOCOLATE", 1, 0, 0, 3, 700, 14, {}, "Load off.", "Machine ready.")
+                ]
+            },
+            {
                 id: "tc25", test: "TC25", title: "All Sold Out", subtitle: "Machine locks until restock",
                 description: "Tests the SERVICE_REQUIRED block when total stock = 0.",
                 steps: [
@@ -801,6 +823,17 @@
                     step(1, "ALL_SOLD_OUT", "CHOCOLATE", 1, 0, 0, 0, 0, 0, { lowStock: true, error: true }, "Service Required.", "Sales strictly blocked."),
                     step(2, "RESTOCKING", "CHOCOLATE", 1, 0, 0, 15, 0, 0, {}, "Restock mode.", "Adding products."),
                     step(3, "IDLE", "CHOCOLATE", 1, 0, 0, 15, 0, 0, {}, "Recovered.", "Machine functional again.")
+                ]
+            },
+            {
+                id: "tc26", test: "TC26", title: "Machine Fault", subtitle: "Service Required state",
+                description: "Tests the SERVICE_REQUIRED fault forcing an immediate block and refund.",
+                steps: [
+                    step(0, "IDLE", "CHOCOLATE", 1, 0, 0, 15, 0, 0, {}, "Idle.", "Waiting for input."),
+                    step(1, "COLLECTING", "CHOCOLATE", 1, 500, 0, 15, 0, 0, {}, "500 fils inserted.", "Credit stored."),
+                    step(2, "SERVICE_REQUIRED", "CHOCOLATE", 1, 0, 500, 15, 0, 0, { error: true, return: true, change: true, lowStock: true }, "Machine Fault!", "Fault detected. Credit returned immediately."),
+                    step(3, "SERVICE_REQUIRED", "CHOCOLATE", 1, 0, 500, 15, 0, 0, { error: true, lowStock: true }, "Locked.", "Waiting for admin clearance."),
+                    step(4, "IDLE", "CHOCOLATE", 1, 0, 500, 15, 0, 0, {}, "Service Clear.", "Fault resolved, ready for use.")
                 ]
             }
         ];
